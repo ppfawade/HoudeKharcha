@@ -30,9 +30,7 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      "expo-haptics"
-    ],
+    "plugins": [],
     "extra": {
       "eas": {
         "projectId": "YOUR_EAS_PROJECT_ID"
