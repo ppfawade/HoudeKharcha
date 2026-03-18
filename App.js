@@ -59,6 +59,9 @@ import {
   ChevronDown,
 } from 'lucide-react-native';
 
+// ─── Web-safe haptics helper ──────────────────────────────────────────────────
+const haptic = (fn) => { if (Platform.OS !== 'web') { fn(); } };
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -211,7 +214,7 @@ function ExpenseModal({ visible, onClose, onSave, editingExpense }) {
   const handleSave = async () => {
     const parsed = parseFloat(amount);
     if (!parsed || parsed <= 0) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptic(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error));
       return;
     }
     // Build ISO date string from selectedDate but preserve time-of-day as noon
@@ -234,7 +237,7 @@ function ExpenseModal({ visible, onClose, onSave, editingExpense }) {
         };
     await onSave(expense, isEditing);
     setSuccess(true);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    haptic(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success));
     setTimeout(() => onClose(), 900);
   };
 
@@ -282,31 +285,61 @@ function ExpenseModal({ visible, onClose, onSave, editingExpense }) {
               />
 
               {/* Date picker */}
-              <TouchableOpacity
-                style={styles.datePicker}
-                onPress={() => { Haptics.selectionAsync(); setShowPicker(true); }}
-                activeOpacity={0.8}
-              >
-                <Calendar size={16} color={COLORS.accent} strokeWidth={2} />
-                <Text style={styles.datePickerText}>{smartDateLabel(selectedDate)}</Text>
-                <ChevronDown size={16} color={COLORS.textMuted} strokeWidth={2} />
-              </TouchableOpacity>
-
-              {showPicker && (
-                <DateTimePicker
-                  value={selectedDate}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
-                  maximumDate={new Date()}
-                  themeVariant="dark"
-                  onChange={(event, date) => {
-                    if (Platform.OS === 'android') setShowPicker(false);
-                    if (event.type !== 'dismissed' && date) {
-                      Haptics.selectionAsync();
-                      setSelectedDate(date);
-                    }
-                  }}
-                />
+              {Platform.OS === 'web' ? (
+                <View style={styles.datePicker}>
+                  <Calendar size={16} color={COLORS.accent} strokeWidth={2} />
+                  <input
+                    type="date"
+                    value={selectedDate.toISOString().split('T')[0]}
+                    max={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        const [y, m, d] = e.target.value.split('-').map(Number);
+                        setSelectedDate(new Date(y, m - 1, d, 12));
+                      }
+                    }}
+                    style={{
+                      flex: 1,
+                      backgroundColor: 'transparent',
+                      color: '#F1F5F9',
+                      border: 'none',
+                      outline: 'none',
+                      fontSize: 14,
+                      fontFamily: 'inherit',
+                      marginLeft: 8,
+                      cursor: 'pointer',
+                      colorScheme: 'dark',
+                    }}
+                  />
+                </View>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={styles.datePicker}
+                    onPress={() => { haptic(() => Haptics.selectionAsync()); setShowPicker(true); }}
+                    activeOpacity={0.8}
+                  >
+                    <Calendar size={16} color={COLORS.accent} strokeWidth={2} />
+                    <Text style={styles.datePickerText}>{smartDateLabel(selectedDate)}</Text>
+                    <ChevronDown size={16} color={COLORS.textMuted} strokeWidth={2} />
+                  </TouchableOpacity>
+                  {showPicker && (
+                    <DateTimePicker
+                      value={selectedDate}
+                      mode="date"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
+                      maximumDate={new Date()}
+                      themeVariant="dark"
+                      onChange={(event, date) => {
+                        if (Platform.OS === 'android') setShowPicker(false);
+                        if (event.type !== 'dismissed' && date) {
+                          haptic(() => Haptics.selectionAsync());
+                          setSelectedDate(date);
+                        }
+                      }}
+                    />
+                  )}
+                </>
               )}
 
               <Text style={styles.sectionLabel}>Category</Text>
@@ -317,7 +350,7 @@ function ExpenseModal({ visible, onClose, onSave, editingExpense }) {
                     <TouchableOpacity
                       key={cat.label}
                       style={[styles.catChip, active && { borderColor: cat.color, backgroundColor: cat.color + '22' }]}
-                      onPress={() => { Haptics.selectionAsync(); setSelectedCat(cat); }}
+                      onPress={() => { haptic(() => Haptics.selectionAsync()); setSelectedCat(cat); }}
                     >
                       <CategoryIcon iconKey={cat.icon} size={15} color={active ? cat.color : COLORS.textMuted} />
                       <Text style={[styles.catChipLabel, active && { color: cat.color }]}>{cat.label}</Text>
@@ -368,7 +401,7 @@ function TxRow({ exp, onEdit, onDelete }) {
             style={[styles.swipeBtn, styles.swipeDelete]}
             onPress={() => {
               close();
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              haptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium));
               Alert.alert(
                 'Delete Expense',
                 'Are you sure you want to delete this expense?',
@@ -394,7 +427,7 @@ function TxRow({ exp, onEdit, onDelete }) {
       renderRightActions={renderRightActions}
       rightThreshold={40}
       overshootRight={false}
-      onSwipeableWillOpen={() => Haptics.selectionAsync()}
+      onSwipeableWillOpen={() => haptic(() => Haptics.selectionAsync())}
     >
       <View style={styles.txRow}>
         <View style={[styles.txIcon, { backgroundColor: meta.color + '22' }]}>
@@ -445,7 +478,7 @@ export default function App() {
     const updated = expenses.filter((e) => e.id !== id);
     setExpenses(updated);
     await persist(updated);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    haptic(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success));
   }, [expenses, persist]);
 
   const openEdit = useCallback((exp) => { setEditingExpense(exp); setModalVisible(true); }, []);
@@ -470,13 +503,8 @@ export default function App() {
     try {
       const uri = await captureRef(dashRef, { format: 'png', quality: 0.95 });
       if (Platform.OS === 'web') {
-        // Web: download the image directly via a temporary anchor tag
-        const link = document.createElement('a');
-        link.href = uri;
-        link.download = 'houdekharcha-summary.png';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // Web: open the captured image in a new tab — user can save from there
+        window.open(uri, '_blank');
       } else {
         const canShare = await Sharing.isAvailableAsync();
         if (canShare) {
@@ -599,7 +627,7 @@ export default function App() {
         {/* ── FAB ── */}
         <TouchableOpacity
           style={styles.fab}
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); openAdd(); }}
+          onPress={() => { haptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)); openAdd(); }}
           activeOpacity={0.85}
         >
           <Plus size={26} color="#000" strokeWidth={2.8} />
