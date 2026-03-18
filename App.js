@@ -402,14 +402,19 @@ function TxRow({ exp, onEdit, onDelete }) {
             onPress={() => {
               close();
               haptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium));
-              Alert.alert(
-                'Delete Expense',
-                'Are you sure you want to delete this expense?',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Delete', style: 'destructive', onPress: () => onDelete(exp.id) },
-                ]
-              );
+              if (Platform.OS === 'web') {
+                // window.confirm is blocked inside iframes; skip dialog and delete directly
+                onDelete(exp.id);
+              } else {
+                Alert.alert(
+                  'Delete Expense',
+                  'Are you sure you want to delete this expense?',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Delete', style: 'destructive', onPress: () => onDelete(exp.id) },
+                  ]
+                );
+              }
             }}
             activeOpacity={0.8}
           >
