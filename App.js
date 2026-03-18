@@ -464,14 +464,26 @@ export default function App() {
 
   // ── Share ──
   const handleShare = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     try {
       const uri = await captureRef(dashRef, { format: 'png', quality: 0.95 });
-      const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share HoudeKharcha Summary' });
+      if (Platform.OS === 'web') {
+        // Web: download the image directly via a temporary anchor tag
+        const link = document.createElement('a');
+        link.href = uri;
+        link.download = 'houdekharcha-summary.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       } else {
-        Alert.alert('Sharing not available on this device.');
+        const canShare = await Sharing.isAvailableAsync();
+        if (canShare) {
+          await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share HoudeKharcha Summary' });
+        } else {
+          Alert.alert('Sharing not available on this device.');
+        }
       }
     } catch (e) { Alert.alert('Could not capture dashboard', e.message); }
   };
